@@ -9,7 +9,7 @@
 #
 # Unless required by applicable law or agreed to in writing software
 # distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDï¿?either express or implied.
+# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDé”Ÿ?either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====================================================================================
@@ -22,6 +22,7 @@ import numpy as np
 import argparse
 import mindspore as ms
 import mindspore.nn as nn
+
 from mindspore.common import set_seed
 from mindspore import Tensor, Model, context
 from mindspore import load_checkpoint, load_param_into_net
@@ -35,6 +36,8 @@ from src.utils.local_adapter import get_device_id, get_device_num
 from src.config import cfg
 from src.dataset.dataset import dataset_creator
 from src.utils.lr_generator import step_lr, multi_step_lr, warmup_step_lr
+
+import mindcv.optim as optim_ms
 
 set_seed(cfg.SOLVER.SEED)
 
@@ -250,7 +253,8 @@ def train_net():
 
     opt2 = nn.SGD(params, learning_rate=lr, weight_decay=cfg.SOLVER.
                               WEIGHT_DECAY)
-    # opt3 = nn.optim_ex.AdamW(params, lr=lr, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+    
     # print(type(opt3))
     # print(type(opt2))
     # print(params)
@@ -259,7 +263,7 @@ def train_net():
     #     opt2 = nn.Momentum(net.trainable_params(), learning_rate=lr,
     #                        momentum=cfg.momentum, weight_decay=cfg.weight_decay, use_nesterov=True)
 
-    model2 = Model(network=net, optimizer=opt2, loss_fn=ptcrloss)
+    model2 = Model(network=net, optimizer=opt3, loss_fn=ptcrloss)
 
     callbacks = get_callbacks(num_batches)
     # callbacks += [EvalCallBack(net, 1)]
