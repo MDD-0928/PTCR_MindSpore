@@ -262,12 +262,6 @@ class TokenPerception(nn.Cell):
         self.num_group = num_group
         self.num_classes = num_classes
 
-        # self.p_GeM = [GeM().cuda() for _ in range(self.num_group)]
-        # self.bottalnecks = [nn.BatchNorm1d(embed_dims[2], device="cuda") for _ in range(self.num_group)]
-        # self.p_head = [nn.Linear(embed_dims[2], num_classes, device="cuda") for _ in range(self.num_group)]
-        # self.p_GeM = [GeM() for _ in range(self.num_group)]
-        # self.bottalnecks = [nn.BatchNorm1d(embed_dims[2]) for _ in range(self.num_group)]
-        # self.p_head = [nn.Dense(embed_dims[2], num_classes) for _ in range(self.num_group)]
         self.p_GeM = nn.CellList()
         for _ in range(self.num_group):
             self.p_GeM.append(GeM())
@@ -281,7 +275,6 @@ class TokenPerception(nn.Cell):
 
     def construct(self, stage_feats):
         shapes = [feat.shape for feat in stage_feats]
-        # scores = torch.zeros(shapes[2][0], self.num_classes).cuda()
         scores = ms.ops.zeros((shapes[2][0], self.num_classes))
 
         for i in range(self.num_group):
@@ -313,29 +306,9 @@ class build_PTCR(nn.Cell):
         #     print('Loading pretrained ImageNet21K model......from {}'.format(cfg.MODEL.PRETRAIN_PATH))
 
     def construct(self, x, label=None, view_label=None, cam_label=None):
-        #print(type(x))
-        #print("x")
-        #print(" ")
-        #print(" ")
-        #wprint(" ")
-
-
-        #print(x)
-        #print(label)
-        #print(view_label)
-        #print(cam_label)
+    
         feat, stage_feats = self.ptcr(x, label, view_label, cam_label)
-        # print("feat")
-        # print(feat)
         shapes = [feat.shape for feat in stage_feats]
-        #print("stage_feats_shape: {}".format(shapes))
-        #print("\n")
-        #print("feat: {}".format(feat))
-        #print("\n")
-        #print("feat_type: {}".format(type(feat)))
-        #print("\n")
-        #print("feat_shape: {}".format(feat.shape))
-        #print("\n")
         feat_bn = self.bottalneck(feat)
         score = self.head(feat_bn)
 
@@ -343,18 +316,6 @@ class build_PTCR(nn.Cell):
             score += self.token_perception(stage_feats)
 
         if self.training:
-            # print("score: {}".format(score))
-            # print("\n")
-            # print("score_type: {}".format(type(score)))
-            # print("\n")
-            # print("score_shape: {}".format(score.shape))
-            # print("\n")
-            # print("feat: {}".format(feat))
-            # print("\n")
-            # print("feat_type: {}".format(type(feat)))
-            # print("\n")
-            # print("feat_shape: {}".format(feat.shape))
-            # print("\n")
             return score, feat
         else:
             return feat
@@ -374,8 +335,6 @@ class build_PTCR(nn.Cell):
 
 def make_model(cfg, num_class, camera_num, view_num):
     model = build_PTCR(cfg, num_class)
-    # for i in model.parameters_dict().keys():
-        # print(i)
-    # print(model.parameters_dict().keys())
+
     print('===========building PCTR===========')
     return model
