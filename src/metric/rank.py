@@ -129,20 +129,8 @@ def eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
         remove = (g_pids[order] == q_pid) & (g_camids[order] == q_camid)
         keep = np.invert(remove)
 
-        # print(keep)
-        # print("keep is ")
-        # print([keep])
-        # print(" ")
-
-        # compute cmc curve
-        # print("matches[q_idx]")
-        # print(matches[q_idx])
-
         raw_cmc = matches[q_idx][keep]
-        #raw_cmc = matches[q_idx]
 
-        # print("raw_cmc")
-        # print(raw_cmc)
         # binary vector, positions with value 1 are correct matches
         if not np.any(raw_cmc):
             # this condition is true when query identity does not appear in gallery
