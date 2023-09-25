@@ -50,48 +50,19 @@ def eval_net(net=None):
         batch_size_test=cfg.TEST.IMS_PER_BATCH, workers=cfg.DATALOADER.NUM_WORKERS,
         cuhk03_labeled=cfg.DATALOADER.cuhk03_labeled, cuhk03_classic_split=cfg.DATALOADER.cuhk03_classic_split
         , mode='gallery')
-    #for i in query_dataset:
-        #print(i)
-    #num_classes, dataset1, camera_num, view_num = dataset_creator(
-        #root=cfg.DATASETS.ROOT_DIR, height=cfg.INPUT.HEIGHT,
-        #width=cfg.INPUT.WIDTH, dataset=cfg.DATASETS.NAMES,
-        #norm_mean=cfg.INPUT.PIXEL_MEAN, norm_std=cfg.INPUT.PIXEL_STD,
-        #batch_size_train=cfg.SOLVER.IMS_PER_BATCH, workers=cfg.DATALOADER.NUM_WORKERS,
-        #cuhk03_labeled=cfg.DATALOADER.cuhk03_labeled, cuhk03_classic_split=cfg.DATALOADER.cuhk03_classic_split
-        #, mode='train')
     
-    #for data in dataset1.create_dict_iterator():
-      #print(1)
-    #print(dataset1.get_col_names())
-    
-    #if net is None:
-     #   net = make_model(num_train_classes)
-      #  param_dict = load_checkpoint(
-       #     cfg.checkpoint_file_path, filter_prefix='epoch_num')
-        #params_not_loaded = load_param_into_net(net, param_dict)
-        #print(params_not_loaded)
     net = make_model(cfg, num_class=num_train_classes, camera_num=camera_num, view_num=view_num)
-    # print(net.parameters_dict())
-    # print(query_dataset)
-    # print(gallery_dataset)
-    # param_dict = load_checkpoint("/data1/mqx_log/PTCR_GRAPH_1/debug_logs/checkpoint/market1501/mdd_2-80_736.ckpt")
+
     param_dict = load_checkpoint("/data1/mqx_log/PTCR_GRAPH_3/debug_logs/checkpoint/market1501/mdd-120_736.ckpt")
-    #for i in param_dict:
-        #print(i)
-    #print(param_dict["ptcr.block3.12.mlp.conv2.0.bias"].asnumpy())
-    ##print(" ")
-    #print(param_dict["adam_m.ptcr.block3.12.mlp.conv2.0.bias"].asnumpy())
-    a,b = load_param_into_net(net, param_dict)
-    #print(a)
-    #print(b)
+
+    load_param_into_net(net, param_dict)
+
     print('load over')
     
-    #do_eval(net, query_dataset, dataset1)
     do_eval(net, query_dataset, gallery_dataset)
 
 
 def do_eval(net, query_dataset, gallery_dataset):
-#def do_eval(net, query_dataset, dataset1):
     '''eval the net, called in EvalCallback'''
 
     net.set_train(False)
@@ -113,37 +84,25 @@ def do_eval(net, query_dataset, gallery_dataset):
 
     print('Extracting features from query set ...')
     qf, q_pids, q_camids = feature_extraction(query_dataset)
-    # qf, q_pids, q_camids = feature_extraction(dataset1)
     print('Done, obtained {}-by-{} matrix'.format(qf.shape[0], qf.shape[1]))
     
     
     print('Extracting features from gallery set ...')
     gf, g_pids, g_camids = feature_extraction(gallery_dataset)
-    #qf, q_pids, q_camids = feature_extraction(dataset1)
     print('Done, obtained {}-by-{} matrix'.format(gf.shape[0], gf.shape[1]))
     
-    #print("qf")
-    #print(qf)
-    #print("gf")
-    #print(gf)
 
-    # if cfg.TEST.FEAT_NORM=='yes':
-        # l2_normalize = ops.L2Normalize(axis=1)
-        # qf = l2_normalize(qf)
-        # gf = l2_normalize(gf)
+
+    if cfg.TEST.FEAT_NORM=='yes':
+        l2_normalize = ops.L2Normalize(axis=1)
+        qf = l2_normalize(qf)
+        gf = l2_normalize(gf)
 
     print('Computing distance matrix with metric=euclidean...')
-    print("qf is")
-    # print(qf.shape)
-    print(qf)
 
-    print("gf is")
-    # print(gf.shape)
-    print(gf)
     distmat = distance.compute_distance_matrix(qf, gf, 'euclidean')
     distmat = distmat.asnumpy()
-    # print("dismat is ")
-    # print(distmat)
+
 
     if not cfg.DATALOADER.use_metric_cuhk03:
         print('Computing CMC mAP mINP ...')
@@ -177,8 +136,6 @@ def do_eval(net, query_dataset, gallery_dataset):
         print('Rank-{:<3}: {:.2%}'.format(r, cmc[i]))
         i += 1
 
-    # net.set_train(True)
-    # print(net.training)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="ReID Baseline Training")
@@ -186,13 +143,12 @@ if __name__ == '__main__':
         "--config_file", default="./src/PTCR.yml", help="path to config file", type=str
     )
 
-    # parser.add_argument("opts", help="Modify config options using the command-line", default=None,
-    #                     nargs=argparse.REMAINDER)
     parser.add_argument("--local_rank", default=0, type=int)
     args = parser.parse_args()
 
     if args.config_file != "":
         cfg.merge_from_file(args.config_file)
+        
     # cfg.merge_from_list(args.opts)
     cfg.freeze()
     
