@@ -35,12 +35,3 @@ class GeneralizedMeanPoolingP(nn.Cell):
         return self.__class__.__name__ + '(' \
                + str(self.p) + ', ' \
                + 'output_size=' + str(self.output_size) + ')'
-
-# class GeneralizedMeanPoolingP(GeneralizedMeanPooling):
-#     """ Same, but norm is trainable
-#     """
-#
-#     def __init__(self, norm=3, output_size=1, eps=1e-6):
-#         super(GeneralizedMeanPoolingP, self).__init__(norm, output_size, eps)
-#         # self.p = nn.Parameter(torch.ones(1) * norm)
-#         self.p = ms.ops.ones(1) * norm
