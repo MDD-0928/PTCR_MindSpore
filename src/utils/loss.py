@@ -360,45 +360,21 @@ class PTCRLoss(nn.Cell):
         forward
         '''
         score, feat = logits
-        # print(score.shape)
-        # print(feat.shape)
+       
         target = labels
-        # print(target.shape)
-        # if isinstance(score, list):
-          # print(score[0])
-          # print("score is list, score[0] is : ")
-          # print(score)
-        # else:
-          # print("score is: ")
-          # print(score)
-          
-        # print("target is : ") 
-        # print(target)
         
         if isinstance(score, list):
             acc = (score[0].max(axis=1, return_indices=True)[1] == target).float().mean()
         else:
-            # print(score.max(axis=1, return_indices=True))
-            # print("")
-            # print("")
-            # print(score.max(axis=1, return_indices=True)[1])
-            # print("")
-            # print(target)
             acc = (score.max(axis=1, return_indices=True)[1] == target).float().mean()
             
         print(acc)
-        
-        # print(type(acc))
-        # self.acc_meter.update(acc, 1)
-        
-        
 
         if isinstance(score, list):
             ID_LOSS = [ms.ops.cross_entropy(scor, target) for scor in score[1:]]
             ID_LOSS = sum(ID_LOSS) / len(ID_LOSS)
             ID_LOSS = 0.5 * ID_LOSS + 0.5 * ms.ops.cross_entropy(score[0], target)
         else:
-
             ID_LOSS = ms.ops.cross_entropy(score, target)
 
         if isinstance(feat, list):
@@ -406,7 +382,6 @@ class PTCRLoss(nn.Cell):
             TRI_LOSS = sum(TRI_LOSS) / len(TRI_LOSS)
             TRI_LOSS = 0.5 * TRI_LOSS + 0.5 * self.tri(feat[0], target)[0]
         else:
-
             TRI_LOSS = self.tri(feat, target)
                 
         return self.loss_weight * ID_LOSS + \
