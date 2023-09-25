@@ -29,6 +29,7 @@ from mindspore import dtype as mstype
 import mindspore.dataset.vision as vis
 from mindspore import Tensor
 
+"""
 def _get_pixels(per_pixel, rand_color, patch_size, dtype=mstype.float32):
 
     if per_pixel:
@@ -75,8 +76,6 @@ class RandomErasing(PyTensorOperation):
         return input
 
     def _erase(self, img, chan, img_h, img_w, dtype):
-        # img = Tensor(img)
-        # print(dtype)
         if random.random() > self.probability:
             return
         area = img_h * img_w
@@ -94,9 +93,8 @@ class RandomErasing(PyTensorOperation):
                     img[:, top:top + h, left:left + w] = _get_pixels(
                         self.per_pixel, self.rand_color, (chan, h, w),
                         dtype)
-                    # print(type(img))
                     break
-
+"""
 """
 class RandomErasing():
     Randomly erases an image patch.
@@ -201,24 +199,6 @@ def build_train_transforms(
         print('+ random crop')
         transform_tr += [vis.RandomCrop(size=(height, width))]
 
-    # if norm_mean is None or norm_std is None:
-    #     norm_mean = [0.485, 0.456, 0.406]  # imagenet mean
-    #     norm_std = [0.229, 0.224, 0.225]  # imagenet std
-    # normalize = vis.Normalize(mean=[255*i for i in norm_mean], std=[255*i for i in norm_std])
-    # print('+ Normalization (mean={}, std={})'.format([255*i for i in norm_mean], [255*i for i in norm_std]))
-    # transform_tr += [normalize]
-    #
-    # print("+ HWC2CHW()")
-    # transform_tr += [vis.HWC2CHW()]
-    #
-    # if 'random_erase' in cfg.TRANSFORM and cfg.REA:
-    #     print('+ random erase')
-    #     # transform_tr += [RandomErasing(mean=norm_mean)]
-    #     transform_tr += [vis.RandomErasing(value=[int(255*i) for i in norm_mean])]
-    #
-    # print('+ to numpy array of range [0, 1]')
-    # transform_tr += [vis.Rescale(1.0/255.0, 0.0)]
-
     print('+ to numpy array of range [0, 1]')
     transform_tr += [vis.ToTensor()]
 
@@ -231,12 +211,7 @@ def build_train_transforms(
 
     if 'random_erase' in cfg.TRANSFORM and cfg.REA:
         print('+ random erase')
-        # transform_tr += [RandomErasing(mean=norm_mean)]
-        # transform_tr += [RandomErasing(probability=cfg.INPUT.RE_PROB, mode='pixel', max_count=1)]
         transform_tr += [vis.RandomErasing(value='random', max_attempts=10)]
-        # transform_tr += [vis.RandomErasing(value=0, max_attempts=1)]
-
-
 
     transform_tr = Compose(transform_tr)
     return transform_tr
