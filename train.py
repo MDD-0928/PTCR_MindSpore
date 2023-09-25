@@ -9,7 +9,7 @@
 #
 # Unless required by applicable law or agreed to in writing software
 # distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDï¿?either express or implied.
+# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDé”Ÿ?either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====================================================================================
@@ -38,8 +38,11 @@ from src.dataset.dataset import dataset_creator
 from src.utils.lr_generator import step_lr, multi_step_lr, warmup_step_lr
 
 import mindcv.optim as optim_ms
+<<<<<<< HEAD
 import mindcv.scheduler as scheduler_ms
 from mindspore.train import Accuracy
+=======
+>>>>>>> a9503fbc176743323bfc4e9885d1e4ad8cac8ed5
 
 set_seed(cfg.SOLVER.SEED)
 
@@ -233,12 +236,19 @@ def train_net():
         )
 
 
-    lr = init_lr(num_batches=num_batches)
-
-    # if cfg.optim == 'Adam':
-    #     opt2 = nn.Adam(net.trainable_params(), learning_rate=lr,
-    #                    beta1=cfg.adam_beta1, beta2=cfg.adam_beta2, weight_decay=cfg.weight_decay)
-    # elif cfg.optim == 'AdamW':
+    lr_sche = scheduler_ms.create_scheduler(
+        steps_per_epoch=num_batches,
+        scheduler="cosine_decay",
+        lr=cfg.SOLVER.BASE_LR,
+        min_lr=0.002 * cfg.SOLVER.BASE_LR,
+        warmup_epochs=cfg.SOLVER.WARMUP_EPOCHS,
+        warmup_factor=0.01,
+        decay_epochs=cfg.SOLVER.MAX_EPOCHS - cfg.SOLVER.WARMUP_EPOCHS,
+        num_epochs=cfg.SOLVER.MAX_EPOCHS,
+        num_cycles=1,
+        cycle_decay=1.0,
+        lr_epoch_stair=True
+    )
 
     params = []
     # all_parameters = []
@@ -259,6 +269,7 @@ def train_net():
 
         params += [{"params": [param], "lr": lr, "weight_decay": weight_decay}]
 
+<<<<<<< HEAD
     # opt2 = nn.SGD(params, learning_rate=lr, weight_decay=cfg.SOLVER.
                               # WEIGHT_DECAY)
                               
@@ -281,6 +292,11 @@ def train_net():
     
     opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche,
                                      weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+=======
+    opt2 = nn.SGD(params, learning_rate=lr, weight_decay=cfg.SOLVER.
+                              WEIGHT_DECAY)
+    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+>>>>>>> a9503fbc176743323bfc4e9885d1e4ad8cac8ed5
     
     # print(type(opt3))
     # print(type(opt2))
