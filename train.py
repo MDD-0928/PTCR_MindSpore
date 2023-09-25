@@ -38,14 +38,10 @@ from src.dataset.dataset import dataset_creator
 from src.utils.lr_generator import step_lr, multi_step_lr, warmup_step_lr
 
 import mindcv.optim as optim_ms
-<<<<<<< HEAD
 import mindcv.scheduler as scheduler_ms
 from mindspore.train import Accuracy
-=======
->>>>>>> a9503fbc176743323bfc4e9885d1e4ad8cac8ed5
 
 set_seed(cfg.SOLVER.SEED)
-
 
 class LossCallBack(LossMonitor):
     """
@@ -109,25 +105,6 @@ class EvalCallBack(Callback):
         cur_epoch = cb_param.cur_epoch_num
         if cur_epoch % self.eval_per_epoch == 0:
             do_eval(self.net, self.query_dataset, self.gallery_dataset)
-
-
-def init_lr(num_batches):
-    '''initialize learning rate.'''
-    # if cfg.LR_SCHEDULER == 'single_step':
-    #     lr = step_lr(cfg.SOLVER.BASE_LR, cfg.step_epoch, num_batches,
-    # cfg.SOLVER.MAX_EPOCHS, cfg.gamma)
-    # elif cfg.LR_SCHEDULER == 'multi_step':
-    #     lr = multi_step_lr(cfg.SOLVER.BASE_LR, cfg.step_epoch,
-    #                        num_batches, cfg.SOLVER.MAX_EPOCHS, cfg.gamma)
-    # if cfg.LR_SCHEDULER == 'cosine':
-    lr = np.array(nn.cosine_decay_lr(0., cfg.SOLVER.BASE_LR, num_batches * cfg.SOLVER.MAX_EPOCHS, num_batches,
-                                     cfg.SOLVER.MAX_EPOCHS)).astype(np.float32)
-    # elif cfg.LR_SCHEDULER == 'warmup_step':
-    #     lr = warmup_step_lr(cfg.SOLVER.BASE_LR, cfg.step_epoch, num_batches, cfg.warmup_epoch,
-    #                         cfg.SOLVER.MAX_EPOCHS, cfg.gamma)
-
-    return lr
-
 
 def check_isfile(fpath):
     '''check whether the path is a file.'''
@@ -210,24 +187,10 @@ def train_net():
         batch_size_train=cfg.SOLVER.IMS_PER_BATCH, workers=cfg.DATALOADER.NUM_WORKERS,
         cuhk03_labeled=cfg.DATALOADER.cuhk03_labeled, cuhk03_classic_split=cfg.DATALOADER.cuhk03_classic_split
         , mode='train')
-    # print(dataset1)
-    #for i in dataset1:
-        #print(i)
+
     num_batches = dataset1.get_dataset_size()
-    # print(dataset1.output_shapes())
-    # print(dataset1.get_col_names())
-    # =================================
-    # print(dataset1.get_batch_size())
+   
     net = make_model(cfg, num_class=num_classes, camera_num=camera_num, view_num=view_num)
-    # param_dict = load_checkpoint("/data1/mqx_log/PTCR_GRAPH/debug_logs/checkpoint/market1501/mdd-20_736.ckpt")
-
-    # load_param_into_net(net, param_dict)
-    # print('load over')
-    # param_dict = load_checkpoint("/data1/mqx_log/PTCR_MindSpore/debug_logs/checkpoint/market1501/mdd_3-91_736.ckpt")
-
-    # load_param_into_net(net, param_dict)
-
-    # print("load ckpt from /data1/mqx_log/PTCR_MindSpore/debug_logs/checkpoint/market1501/mdd-20_736.ckpt")
     
     ptcrloss = PTCRLoss(
         ce=CrossEntropyLoss(num_classes=num_classes,
@@ -235,25 +198,7 @@ def train_net():
         tri=TripletLoss(margin=cfg.SOLVER.MARGIN)
         )
 
-
-    lr_sche = scheduler_ms.create_scheduler(
-        steps_per_epoch=num_batches,
-        scheduler="cosine_decay",
-        lr=cfg.SOLVER.BASE_LR,
-        min_lr=0.002 * cfg.SOLVER.BASE_LR,
-        warmup_epochs=cfg.SOLVER.WARMUP_EPOCHS,
-        warmup_factor=0.01,
-        decay_epochs=cfg.SOLVER.MAX_EPOCHS - cfg.SOLVER.WARMUP_EPOCHS,
-        num_epochs=cfg.SOLVER.MAX_EPOCHS,
-        num_cycles=1,
-        cycle_decay=1.0,
-        lr_epoch_stair=True
-    )
-
     params = []
-    # all_parameters = []
-    # for item in net.get_parameters():
-    #     all_parameters.append(item)
     for param in net.get_parameters():
         if not param.requires_grad:
             continue
@@ -268,10 +213,6 @@ def train_net():
                 print('Using two times learning rate for fc ')
 
         params += [{"params": [param], "lr": lr, "weight_decay": weight_decay}]
-
-<<<<<<< HEAD
-    # opt2 = nn.SGD(params, learning_rate=lr, weight_decay=cfg.SOLVER.
-                              # WEIGHT_DECAY)
                               
     lr_sche = scheduler_ms.create_scheduler(
         steps_per_epoch=num_batches,
@@ -286,35 +227,13 @@ def train_net():
         cycle_decay=1.0,
         lr_epoch_stair=True
     )
-    
-    lr_sche = lr_sche[num_batches:]
-    #print(lr_sche)
-    
-    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche,
-                                     weight_decay=cfg.SOLVER.WEIGHT_DECAY)
-=======
-    opt2 = nn.SGD(params, learning_rate=lr, weight_decay=cfg.SOLVER.
-                              WEIGHT_DECAY)
+
     opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
->>>>>>> a9503fbc176743323bfc4e9885d1e4ad8cac8ed5
-    
-    # print(type(opt3))
-    # print(type(opt2))
-    # print(params)
-    # print(opt2)
-    # else:
-    #     opt2 = nn.Momentum(net.trainable_params(), learning_rate=lr,
-    #                        momentum=cfg.momentum, weight_decay=cfg.weight_decay, use_nesterov=True)
-    
-    #print(opt3)
 
     model2 = Model(network=net, optimizer=opt3, loss_fn=ptcrloss)
 
     callbacks = get_callbacks(num_batches)
-    # callbacks += [EvalCallBack(net, 1)]
-    # don't know why after eval will bug, maybe something is wrong about the "net.set_train(False)" in do eval()
-    
-    #model2.train(cfg.SOLVER.MAX_EPOCHS, dataset1, callbacks, dataset_sink_mode=False, initial_epoch=20)
+
     model2.train(cfg.SOLVER.MAX_EPOCHS, dataset1, callbacks, dataset_sink_mode=False)
 
     print("======== Train success ========")
