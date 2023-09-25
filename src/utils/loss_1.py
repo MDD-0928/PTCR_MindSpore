@@ -98,10 +98,11 @@ class MarginRankingLoss(nn.Cell):
         loss = self.mean(temp3 * temp3_mask)
         return loss
 
-def normalize(x, axis=-1):
 
+def normalize(x, axis=-1):
     x = 1. * x / (ms.Tensor.norm(x, 2, axis, keepdim=True).expand_as(x) + 1e-12)
     return x
+
 
 def hard_example_mining(dist_mat, labels, return_inds=False):
     assert len(dist_mat.shape) == 2
@@ -143,8 +144,9 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
         n_inds = n_inds.squeeze(1)
         return dist_ap, dist_an, p_inds, n_inds
     '''
-    
+
     return dist_ap, dist_an
+
 
 class TripletLoss(nn.Cell):
 
@@ -156,14 +158,14 @@ class TripletLoss(nn.Cell):
             self.ranking_loss = nn.MarginRankingLoss(margin=margin)
         else:
             self.ranking_loss = nn.SoftMarginLoss()
-            
+
     def construct(self, global_feat, labels, normalize_feature=False):
-        
+
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
 
         dist_mat = pdist_ms(global_feat, global_feat)
-        
+
         dist_ap, dist_an = hard_example_mining(dist_mat, labels)
 
         dist_ap *= (1.0 + self.hard_factor)
@@ -171,15 +173,15 @@ class TripletLoss(nn.Cell):
 
         # y = dist_an.new().resize_as_(dist_an).fill_(1)
         y = dist_an.new_ones(dist_an.shape)
-        
+
         if self.margin is not None:
             loss = self.ranking_loss(dist_an, dist_ap, y)
         else:
             loss = self.ranking_loss(dist_an - dist_ap, y)
-            
+
         return loss
-        
-        
+
+
 class OriTripletLoss(nn.Cell):
     """Triplet utils with hard positive/negative mining.
     Reference:
@@ -338,11 +340,9 @@ def softmax_weights(dist, mask):
     tmp_z = tmp_z + 1e-6
     tmp_w = exp(diff) * mask / tmp_z
     return tmp_w
-    
-    
 
 
-class PTCRLoss(nn.Cell):
+class PTCRLoss(nn.LossBase):
     '''
     wrapped Loss, passed to Model
     '''
@@ -351,30 +351,29 @@ class PTCRLoss(nn.Cell):
         super().__init__()
         self.ce = ce
         self.tri = tri
-        self.loss_weight = cfg.MODEL.ID_LOSS_WEIGHT 
+        self.loss_weight = cfg.MODEL.ID_LOSS_WEIGHT
         self.loss_weight2 = cfg.MODEL.TRIPLET_LOSS_WEIGHT
-        
 
-    def construct(self, logits, labels):
+    def construct(self, a, b, c):
         '''
         forward
         '''
-        score, feat = logits
-        # print(score.shape)
-        # print(feat.shape)
-        target = labels
-        # print(target.shape)
+        score = a
+        feat = b
+
+        target = c
+
         # if isinstance(score, list):
-          # print(score[0])
-          # print("score is list, score[0] is : ")
-          # print(score)
+        # print(score[0])
+        # print("score is list, score[0] is : ")
+        # print(score)
         # else:
-          # print("score is: ")
-          # print(score)
-          
-        # print("target is : ") 
+        # print("score is: ")
+        # print(score)
+
+        # print("target is : ")
         # print(target)
-        
+
         if isinstance(score, list):
             acc = (score[0].max(axis=1, return_indices=True)[1] == target).float().mean()
         else:
@@ -385,13 +384,11 @@ class PTCRLoss(nn.Cell):
             # print("")
             # print(target)
             acc = (score.max(axis=1, return_indices=True)[1] == target).float().mean()
-            
+
         print(acc)
-        
+
         # print(type(acc))
         # self.acc_meter.update(acc, 1)
-        
-        
 
         if isinstance(score, list):
             ID_LOSS = [ms.ops.cross_entropy(scor, target) for scor in score[1:]]
@@ -408,6 +405,6 @@ class PTCRLoss(nn.Cell):
         else:
 
             TRI_LOSS = self.tri(feat, target)
-                
+
         return self.loss_weight * ID_LOSS + \
             self.loss_weight2 * TRI_LOSS

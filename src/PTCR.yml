@@ -4,7 +4,7 @@ MODEL:
   IF_WITH_CENTER: 'no'
   NAME: 'PTCR'
   NO_MARGIN: False
-  DEVICE_ID: ('0')
+  DEVICE_ID: ('3')
   STRIDE_SIZE: [16, 16]
   TP: True
 
@@ -29,12 +29,12 @@ DATALOADER:
 
 SOLVER:
   OPTIMIZER_NAME: 'AdamW'
-  MAX_EPOCHS: 200
+  MAX_EPOCHS: 120
   BASE_LR: 5e-4
-  IMS_PER_BATCH: 16
+  IMS_PER_BATCH: 32
   WARMUP_METHOD: 'cosine'
   LARGE_FC_LR: False
-  CHECKPOINT_PERIOD: 10
+  CHECKPOINT_PERIOD: 4
   LOG_PERIOD: 45
   EVAL_PERIOD: 10
   WEIGHT_DECAY:  0.1
@@ -43,12 +43,12 @@ SOLVER:
 
 TEST:
   EVAL: True
-  IMS_PER_BATCH: 64
+  IMS_PER_BATCH: 8
   RE_RANKING: False
   WEIGHT: './logs/PTCR/transformer_120.pth'
   NECK_FEAT: 'before'
   FEAT_NORM: 'yes'
 
-OUTPUT_DIR: '/data1/mqx_log/PTCR_MindSpore/debug_logs'
+OUTPUT_DIR: '/data1/mqx_log/PTCR_GRAPH_3/debug_logs'
 
 

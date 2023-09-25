@@ -115,11 +115,11 @@ class Dataset():
         # 4-tuple (img_path(s), pid, camid, dsetid) by
         # adding a dataset indicator "dsetid"
         if len(train[0]) == 3:
-            train = [(*items, 0) for items in train]
+            train = [(*items, 1) for items in train]
         if len(query[0]) == 3:
-            query = [(*items, 0) for items in query]
+            query = [(*items, 1) for items in query]
         if len(gallery[0]) == 3:
-            gallery = [(*items, 0) for items in gallery]
+            gallery = [(*items, 1) for items in gallery]
 
         self.train = train
         self.query = query
@@ -130,14 +130,12 @@ class Dataset():
         self.num_train_pids = self.get_num_pids(self.train)
         self.num_train_cams = self.get_num_cams(self.train)
         self.num_datasets = self.get_num_datasets(self.train)
-
         # print(" ")
         # print(" ")
         # print("num_datasets: ")
         # print(self.num_datasets)
         # print(" ")
         # print(" ")
-
         if self.mode == 'train':
             self.data = self.train
         elif self.mode == 'query':
@@ -151,17 +149,16 @@ class Dataset():
             )
 
         if self.verbose:
-
             self.show_summary()
 
     def __getitem__(self, index):
-        img_path, pid, camid, _ = self.data[index]
+        img_path, pid, camid, trackid = self.data[index]
         img = read_image(img_path)
         pid = np.array(pid).astype(np.int32)
         if self.mode == 'train':
-            return img, pid
+            return img, pid, camid, trackid
 
-        return img, pid, camid
+        return img, pid, camid, trackid
 
     def __len__(self):
         return len(self.data)

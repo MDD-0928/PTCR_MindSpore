@@ -8,7 +8,7 @@
 #
 # Unless required by applicable law or agreed to in writing software
 # distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANT IES OR CONITTONS OF ANY KIND， either express or implied.
+# WITHOUT WARRANT IES OR CONITTONS OF ANY KIND�?either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====================================================================================
@@ -80,6 +80,8 @@ def euclidean_squared_distance(input1, input2):
     mat2 = op_pow(input2, 2).sum(
         axis=1, keepdims=True).expand_as(shape_tensor2).T
     distmat = mat1 + mat2
+
+    
     matmul = ops.MatMul(False, True)
     cast = ops.Cast()
     input1 = cast(input1, mindspore.float16)

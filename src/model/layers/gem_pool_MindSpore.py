@@ -2,7 +2,9 @@
 
 import mindspore as ms
 import mindspore.nn as nn
-
+from cmath import inf
+from mindspore import Tensor
+import mindspore.ops as P
 
 class GeneralizedMeanPoolingP(nn.Cell):
     r"""Applies a 2D power-average adaptive pooling over an input signal composed of several input planes.
@@ -33,7 +35,6 @@ class GeneralizedMeanPoolingP(nn.Cell):
         return self.__class__.__name__ + '(' \
                + str(self.p) + ', ' \
                + 'output_size=' + str(self.output_size) + ')'
-
 
 # class GeneralizedMeanPoolingP(GeneralizedMeanPooling):
 #     """ Same, but norm is trainable

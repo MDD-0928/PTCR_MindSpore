@@ -1,4 +1,4 @@
-#coding=UTF-8
+# coding=UTF-8
 # Copyright 2021 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License Version 2.0(the "License");
@@ -9,7 +9,7 @@
 #
 # Unless required by applicable law or agreed to in writing software
 # distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDï¿?either express or implied.
+# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDï¿½?either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====================================================================================
@@ -30,11 +30,11 @@ from mindspore.train.callback import (Callback, ModelCheckpoint, CheckpointConfi
                                       TimeMonitor, SummaryCollector)
 from mindspore.communication.management import init
 from test import do_eval
-from src.utils.loss import OriTripletLoss, CrossEntropyLoss, TripletLoss, PTCRLoss
-from src.model.make_model_MindSpore import make_model
+from src.utils.loss_1 import OriTripletLoss, CrossEntropyLoss, TripletLoss, PTCRLoss
+from src.model.make_model_MindSpore_1 import make_model
 from src.utils.local_adapter import get_device_id, get_device_num
 from src.config import cfg
-from src.dataset.dataset import dataset_creator
+from src.dataset.dataset_1 import dataset_creator
 from src.utils.lr_generator import step_lr, multi_step_lr, warmup_step_lr
 
 import mindcv.optim as optim_ms
@@ -163,17 +163,18 @@ def get_callbacks(num_batches):
     time_cb = TimeMonitor(data_size=num_batches)
     loss_cb = LossCallBack()
     summary_collector = SummaryCollector(
-        summary_dir='/data1/mqx_log/PTCR_MindSpore/summary_dir', collect_freq=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches)
+        summary_dir='/data1/mqx_log/PTCR_MindSpore/summary_dir',
+        collect_freq=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches)
 
     cb = [time_cb, loss_cb, summary_collector]
-    
+
     # print(num_batches)
 
     ckpt_append_info = [
         {"epoch_num": cfg.SOLVER.START_EPOCH, "step_num": cfg.SOLVER.START_EPOCH}]
     # cfg_ck = CheckpointConfig(save_checkpoint_steps=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches,
-                            #   keep_checkpoint_max=5, append_info=ckpt_append_info)
-    cfg_ck = CheckpointConfig(save_checkpoint_steps = cfg.SOLVER.CHECKPOINT_PERIOD * num_batches,
+    #   keep_checkpoint_max=5, append_info=ckpt_append_info)
+    cfg_ck = CheckpointConfig(save_checkpoint_steps=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches,
                               keep_checkpoint_max=30, append_info=ckpt_append_info)
 
     ckpt_cb = ModelCheckpoint(
@@ -197,9 +198,8 @@ def train_net():
     #                                           gradients_mean=True)
     #         init()
 
-
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
-    
+
     num_classes, dataset1, camera_num, view_num = dataset_creator(
         root=cfg.DATASETS.ROOT_DIR, height=cfg.INPUT.HEIGHT,
         width=cfg.INPUT.WIDTH, dataset=cfg.DATASETS.NAMES,
@@ -207,9 +207,11 @@ def train_net():
         batch_size_train=cfg.SOLVER.IMS_PER_BATCH, workers=cfg.DATALOADER.NUM_WORKERS,
         cuhk03_labeled=cfg.DATALOADER.cuhk03_labeled, cuhk03_classic_split=cfg.DATALOADER.cuhk03_classic_split
         , mode='train')
-    # print(dataset1)
-    #for i in dataset1:
-        #print(i)
+
+    # for i in dataset1.create_dict_iterator():
+    #     print(i)
+    # print(camera_num)
+    # print(view_num)
     num_batches = dataset1.get_dataset_size()
     # print(dataset1.output_shapes())
     # print(dataset1.get_col_names())
@@ -225,15 +227,14 @@ def train_net():
     # load_param_into_net(net, param_dict)
 
     # print("load ckpt from /data1/mqx_log/PTCR_MindSpore/debug_logs/checkpoint/market1501/mdd-20_736.ckpt")
-    
-    ptcrloss = PTCRLoss(
-        ce=CrossEntropyLoss(num_classes=num_classes,
-                            label_smooth=cfg.MODEL.LABELSMOOTH),
-        tri=TripletLoss(margin=cfg.SOLVER.MARGIN)
-        )
 
+    # ptcrloss = PTCRLoss(
+    #     ce=CrossEntropyLoss(num_classes=num_classes,
+    #                         label_smooth=cfg.MODEL.LABELSMOOTH),
+    #     tri=TripletLoss(margin=cfg.SOLVER.MARGIN)
+    # )
 
-    lr = init_lr(num_batches=num_batches)
+    # lr = init_lr(num_batches=num_batches)
 
     # if cfg.optim == 'Adam':
     #     opt2 = nn.Adam(net.trainable_params(), learning_rate=lr,
@@ -260,8 +261,8 @@ def train_net():
         params += [{"params": [param], "lr": lr, "weight_decay": weight_decay}]
 
     # opt2 = nn.SGD(params, learning_rate=lr, weight_decay=cfg.SOLVER.
-                              # WEIGHT_DECAY)
-                              
+    # WEIGHT_DECAY)
+
     lr_sche = scheduler_ms.create_scheduler(
         steps_per_epoch=num_batches,
         scheduler="cosine_decay",
@@ -275,13 +276,13 @@ def train_net():
         cycle_decay=1.0,
         lr_epoch_stair=True
     )
-    
+
     lr_sche = lr_sche[num_batches:]
-    #print(lr_sche)
-    
+    # print(lr_sche)
+
     opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche,
                                      weight_decay=cfg.SOLVER.WEIGHT_DECAY)
-    
+
     # print(type(opt3))
     # print(type(opt2))
     # print(params)
@@ -289,17 +290,18 @@ def train_net():
     # else:
     #     opt2 = nn.Momentum(net.trainable_params(), learning_rate=lr,
     #                        momentum=cfg.momentum, weight_decay=cfg.weight_decay, use_nesterov=True)
-    
-    #print(opt3)
 
-    model2 = Model(network=net, optimizer=opt3, loss_fn=ptcrloss)
-
+    # print(opt3)
+    grad_net = nn.TrainOneStepCell(net, opt3)
+    #model2 = Model(network=net, optimizer=opt3)
+    #print(model2)
     callbacks = get_callbacks(num_batches)
+    model = Model(grad_net)
     # callbacks += [EvalCallBack(net, 1)]
     # don't know why after eval will bug, maybe something is wrong about the "net.set_train(False)" in do eval()
-    
-    #model2.train(cfg.SOLVER.MAX_EPOCHS, dataset1, callbacks, dataset_sink_mode=False, initial_epoch=20)
-    model2.train(cfg.SOLVER.MAX_EPOCHS, dataset1, callbacks, dataset_sink_mode=False)
+
+    # model2.train(cfg.SOLVER.MAX_EPOCHS, dataset1, callbacks, dataset_sink_mode=False, initial_epoch=20)
+    model.train(cfg.SOLVER.MAX_EPOCHS, dataset1, callbacks, dataset_sink_mode=False)
 
     print("======== Train success ========")
 

@@ -6,10 +6,10 @@ import copy
 import sys
 import os
 from mindspore.common.initializer import initializer, Constant, HeNormal, Normal, Zero, One
-from ..model.backbones.PTCR_MindSpore import PTCR
+from ..model.backbones.PTCR_MindSpore_1 import PTCR
 from ..utils.metric_learning import Arcface, Cosface, AMSoftmax, CircleLoss
 from ..model.layers.gem_pool_MindSpore import GeneralizedMeanPoolingP as GeM
-
+from ..utils.loss_1 import PTCRLoss
 sys.path.append(os.path.dirname(__file__) + os.sep + '../')
 sys.path.append(os.path.dirname(__file__) + os.sep + './')
 
@@ -312,21 +312,12 @@ class build_PTCR(nn.Cell):
         #     self.load_param(cfg.MODEL.PRETRAIN_PATH)
         #     print('Loading pretrained ImageNet21K model......from {}'.format(cfg.MODEL.PRETRAIN_PATH))
 
-    def construct(self, x, label=None, view_label=None, cam_label=None):
-        #print(type(x))
-        #print("x")
-        #print(" ")
-        #print(" ")
-        #wprint(" ")
-
-
-        #print(x)
-        #print(label)
-        #print(view_label)
-        #print(cam_label)
-        feat, stage_feats = self.ptcr(x, label, view_label, cam_label)
-        # print("feat")
-        # print(feat)
+    def construct(self, x, label=None, cam_label=None, view_label=None):
+        # print(x)
+        # print(label)
+        # print(view_label)
+        # print(cam_label)
+        feat, stage_feats = self.ptcr(x, label, cam_label, view_label)
         shapes = [feat.shape for feat in stage_feats]
         #print("stage_feats_shape: {}".format(shapes))
         #print("\n")
@@ -370,10 +361,22 @@ class build_PTCR(nn.Cell):
     #     for i in param_dict:
     #         self.state_dict()[i].copy_(param_dict[i])
     #     print('Loading pretrained model for finetuning from {}'.format(model_path))
+class CustomWithLossCell(nn.Cell):
+
+    def __init__(self, backbone, loss_fn):
+        super(CustomWithLossCell, self).__init__(auto_prefix=False)
+        self._backbone = backbone
+        self._loss_fn = loss_fn
+
+    def construct(self, x, label=None, cam_label=None, view_label=None):
+        if self._backbone.training:
+            score, feat = self._backbone(x, label, cam_label, view_label)
+            return self._loss_fn(score, feat, label)
 
 
 def make_model(cfg, num_class, camera_num, view_num):
-    model = build_PTCR(cfg, num_class)
+    #model = build_PTCR(cfg, num_class)
+    model = CustomWithLossCell(build_PTCR(cfg, num_class), PTCRLoss)
     # for i in model.parameters_dict().keys():
         # print(i)
     # print(model.parameters_dict().keys())

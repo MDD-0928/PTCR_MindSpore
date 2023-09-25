@@ -11,6 +11,7 @@ import math
 import numpy as np
 from mindspore import jit_class
 
+
 class DropPath(nn.Cell):
     def __init__(self, drop_prob, ndim=1):
         super(DropPath, self).__init__()
@@ -36,7 +37,8 @@ class Mlp(nn.Cell):
         # self.conv1 = nn.Sequential(
         self.conv1 = nn.SequentialCell(
             # nn.Conv2d(in_features, hidden_features, 1, 1, 0, bias=True)
-            nn.Conv2d(in_features, hidden_features, kernel_size=1, stride=1, padding=0, has_bias=True, pad_mode='valid'),
+            nn.Conv2d(in_features, hidden_features, kernel_size=1, stride=1, padding=0, has_bias=True,
+                      pad_mode='valid'),
             act_layer(),
             nn.BatchNorm2d(hidden_features),
         )
@@ -50,7 +52,8 @@ class Mlp(nn.Cell):
         # self.conv2 = nn.Sequential(
         self.conv2 = nn.SequentialCell(
             # nn.Conv2d(hidden_features, out_features, 1, 1, 0, bias=True),
-            nn.Conv2d(hidden_features, out_features, kernel_size=1, stride=1, padding=0, has_bias=True, pad_mode='valid'),
+            nn.Conv2d(hidden_features, out_features, kernel_size=1, stride=1, padding=0, has_bias=True,
+                      pad_mode='valid'),
             nn.BatchNorm2d(out_features),
         )
         # print(self.conv2.parameters_dict())
@@ -267,9 +270,9 @@ class BlurPool(nn.Cell):
 
         filt = ms.Tensor(a[:, None] * a[None, :])
         filt = filt / ms.ops.sum(filt)
-        self.filt = ms.Parameter(filt[None, None, :, :].tile((self.channels, 1, 1, 1)).astype(ms.dtype.float32), name='filt',
+        self.filt = ms.Parameter(filt[None, None, :, :].tile((self.channels, 1, 1, 1)).astype(ms.dtype.float32),
+                                 name='filt',
                                  requires_grad=False)
-        
 
         self.pad = get_pad_layer(pad_type)(tuple(self.pad_sizes))
 
@@ -361,9 +364,10 @@ class ConvPatch(nn.Cell):
 
         return x, H, W
 
+
 @jit_class
 class AuxiliaryEmbedding():
-    def __init__(self, B, D, cam_label, view_label):
+    def __init__(self, B=1, D=1, cam_label=ms.Tensor(1.), view_label=ms.Tensor(1.)):
         super().__init__()
         self.B = B
         self.D = D
@@ -371,6 +375,7 @@ class AuxiliaryEmbedding():
         # print(cam_label)
         # print(view_label)
         # print(123123123)
+
     def __call__(self):
         return self.out
 
@@ -425,7 +430,7 @@ class PTCR(nn.Cell):
             setattr(self, f"norm{i + 1}", norm)
 
         self.global_pool = GeM()
-
+        self.aux = AuxiliaryEmbedding()
         # print(self.global_pool.get_parameters())
         self.apply(self._init_weights)
 
@@ -451,9 +456,7 @@ class PTCR(nn.Cell):
                 # m.bias.data.zero_()
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
 
-
-
-    def construct(self, x, label=None, cam_label=None, view_label=None ):
+    def construct(self, x, label=None, cam_label=None, view_label=None):
         # print('before feature, maps = self.forward_features(x, label, view_label, cam_label)')
         # print(x.shape)
         B = x.shape[0]
@@ -466,14 +469,18 @@ class PTCR(nn.Cell):
             if i == 0:
                 D = x.shape[2]
                 # print(1231232)
-                aux_embed = AuxiliaryEmbedding(B, D, cam_label, view_label)
+                self.aux.B = x.shape[0]
+                self.aux.D= x.shape[2]
+                self.aux.cam_label = cam_label
+                self.aux.view_label = view_label
+
 
                 for j in range(B):
                     # print(aux_embed.out[j])
                     # print("")
                     # print("")
                     # print("")
-                    x[j] += 0.55 * aux_embed.out[j]
+                    x[j] += 0.55 * self.aux.out[j]
             for blk in block:
                 x = blk(x, H, W)
             x = norm(x)
@@ -484,5 +491,5 @@ class PTCR(nn.Cell):
             else:
                 x = self.global_pool(x)
                 x = x.view(x.shape[0], -1)
-        
+
         return x, maps
