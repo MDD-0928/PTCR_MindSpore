@@ -131,13 +131,6 @@ class Dataset():
         self.num_train_cams = self.get_num_cams(self.train)
         self.num_datasets = self.get_num_datasets(self.train)
 
-        # print(" ")
-        # print(" ")
-        # print("num_datasets: ")
-        # print(self.num_datasets)
-        # print(" ")
-        # print(" ")
-
         if self.mode == 'train':
             self.data = self.train
         elif self.mode == 'query':
