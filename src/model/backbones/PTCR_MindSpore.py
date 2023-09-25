@@ -33,53 +33,41 @@ class Mlp(nn.Cell):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
-        # self.conv1 = nn.Sequential(
+        
         self.conv1 = nn.SequentialCell(
-            # nn.Conv2d(in_features, hidden_features, 1, 1, 0, bias=True)
             nn.Conv2d(in_features, hidden_features, kernel_size=1, stride=1, padding=0, has_bias=True, pad_mode='valid'),
             act_layer(),
             nn.BatchNorm2d(hidden_features),
         )
 
-        # self.proj = nn.Conv2d(hidden_features, hidden_features, 3, 1, 1, groups=hidden_features)
         self.proj = nn.Conv2d(hidden_features, hidden_features, kernel_size=3, stride=1, padding=1,
                               pad_mode='pad', group=hidden_features, has_bias=True)
         self.proj_act = act_layer()
         self.proj_bn = nn.BatchNorm2d(hidden_features)
 
-        # self.conv2 = nn.Sequential(
+        
         self.conv2 = nn.SequentialCell(
-            # nn.Conv2d(hidden_features, out_features, 1, 1, 0, bias=True),
             nn.Conv2d(hidden_features, out_features, kernel_size=1, stride=1, padding=0, has_bias=True, pad_mode='valid'),
             nn.BatchNorm2d(out_features),
         )
-        # print(self.conv2.parameters_dict())
-        # print('11111')
-        # print('\n')
+        
         self.drop = nn.Dropout(p=drop)
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Dense):
-            # trunc_normal_(m.weight, std=.02)
             m.weight.set_data(initializer(TruncatedNormal(sigma=0.02), m.weight.shape, m.weight.dtype))
             if isinstance(m, nn.Dense) and m.bias is not None:
-                # nn.init.constant_(m.bias, 0)
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
         elif isinstance(m, nn.BatchNorm2d):
-            # nn.init.constant_(m.bias, 0)
-            # nn.init.constant_(m.weight, 1.0)
             m.beta.set_data(initializer(Zero(), m.beta.shape, m.beta.dtype))
             m.gamma.set_data(initializer(One(), m.gamma.shape, m.gamma.dtype))
         elif isinstance(m, nn.Conv2d):
             fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            # fan_out //= m.groups
             fan_out //= m.group
-            # m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             m.weight.set_data(initializer(Normal(sigma=math.sqrt(2.0 / fan_out)), m.weight.shape, m.weight.dtype))
             if m.bias is not None:
-                # m.bias.data.zero_()
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
 
     def construct(self, x, H, W):
@@ -90,10 +78,6 @@ class Mlp(nn.Cell):
         x = self.proj(x) + x
         x = self.proj_act(x)
         x = self.proj_bn(x)
-        # print('didi')
-        # print(x.shape)
-        # print('here is conv2')
-        # print(self.conv2)
         x = self.conv2(x)
         x = x.flatten(start_dim=2).permute(0, 2, 1)
         x = self.drop(x)
@@ -118,33 +102,24 @@ class Attention(nn.Cell):
 
         self.sr_ratio = sr_ratio
         if sr_ratio > 1:
-            # self.sr = nn.Conv2d(dim, dim, kernel_size=sr_ratio, stride=sr_ratio)
             self.sr = nn.Conv2d(dim, dim, kernel_size=sr_ratio, stride=sr_ratio, has_bias=True, pad_mode='valid')
-            # self.norm = nn.LayerNorm(dim)
             self.norm = nn.LayerNorm((dim,))
 
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Dense):
-            # trunc_normal_(m.weight, std=.02)
             m.weight.set_data(initializer(TruncatedNormal(sigma=0.02), m.weight.shape, m.weight.dtype))
             if isinstance(m, nn.Dense) and m.bias is not None:
-                # nn.init.constant_(m.bias, 0)
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
         elif isinstance(m, nn.LayerNorm):
-            # nn.init.constant_(m.bias, 0)
-            # nn.init.constant_(m.weight, 1.0)
             m.beta.set_data(initializer(Zero(), m.beta.shape, m.beta.dtype))
             m.gamma.set_data(initializer(One(), m.gamma.shape, m.gamma.dtype))
         elif isinstance(m, nn.Conv2d):
             fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            # fan_out //= m.groups
             fan_out //= m.group
-            # m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             m.weight.set_data(initializer(Normal(sigma=math.sqrt(2.0 / fan_out)), m.weight.shape, m.weight.dtype))
             if m.bias is not None:
-                # m.bias.data.zero_()
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
 
     def construct(self, x, H, W):
@@ -192,24 +167,17 @@ class Block(nn.Cell):
 
     def _init_weights(self, m):
         if isinstance(m, nn.Dense):
-            # trunc_normal_(m.weight, std=.02)
             m.weight.set_data(initializer(TruncatedNormal(sigma=0.02), m.weight.shape, m.weight.dtype))
             if isinstance(m, nn.Dense) and m.bias is not None:
-                # nn.init.constant_(m.bias, 0)
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
         elif isinstance(m, nn.LayerNorm):
-            # nn.init.constant_(m.bias, 0)
-            # nn.init.constant_(m.weight, 1.0)
             m.beta.set_data(initializer(Zero(), m.beta.shape, m.beta.dtype))
             m.gamma.set_data(initializer(One(), m.gamma.shape, m.gamma.dtype))
         elif isinstance(m, nn.Conv2d):
             fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            # fan_out //= m.groups
             fan_out //= m.group
-            # m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             m.weight.set_data(initializer(Normal(sigma=math.sqrt(2.0 / fan_out)), m.weight.shape, m.weight.dtype))
             if m.bias is not None:
-                # m.bias.data.zero_()
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
 
     def construct(self, x, H, W):
@@ -229,11 +197,9 @@ class IBN(nn.Cell):
         self.BN = nn.BatchNorm2d(half2)
 
     def construct(self, x):
-        # split = torch.split(x, self.half, 1)
         split = ms.ops.split(x, self.half, axis=1)
         out1 = self.IN(split[0])
         out2 = self.BN(split[1])
-        # out = torch.cat((out1, out2), 1)
         out = ms.ops.cat((out1, out2), axis=1)
         return out
 
@@ -303,7 +269,6 @@ class ConvPatch(nn.Cell):
         super().__init__()
 
         filt_size = patch_size
-        # patch_size = to_2tuple(patch_size)
         patch_size = tuple(repeat(patch_size, 2))
 
         assert max(patch_size) > stride, "Set larger patch_size than stride"
@@ -313,10 +278,6 @@ class ConvPatch(nn.Cell):
         self.H, self.W = img_size[0] // stride, img_size[1] // stride
         self.num_patches = self.H * self.W
         self.conv = nn.SequentialCell(
-            # nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=1, padding=(patch_size[0] // 2,
-            # patch_size[1] // 2), bias=False),
-            # nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=1,
-            #           padding=(patch_size[0] // 2, patch_size[1] // 2), pad_mode='pad', has_bias=False),
             nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=1,
                       padding=patch_size[0] // 2, pad_mode='pad', has_bias=False),
             IBN(embed_dim),
@@ -328,35 +289,24 @@ class ConvPatch(nn.Cell):
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        if isinstance(m, nn.Dense):
-            # trunc_normal_(m.weight, std=.02)
+        if isinstance(m, nn.Dense):   
             m.weight.set_data(initializer(TruncatedNormal(sigma=0.02), m.weight.shape, m.weight.dtype))
             if isinstance(m, nn.Dense) and m.bias is not None:
-                # nn.init.constant_(m.bias, 0)
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
         elif isinstance(m, nn.LayerNorm):
-            # nn.init.constant_(m.bias, 0)
-            # nn.init.constant_(m.weight, 1.0)
             m.beta.set_data(initializer(Zero(), m.beta.shape, m.beta.dtype))
             m.gamma.set_data(initializer(One(), m.gamma.shape, m.gamma.dtype))
         elif isinstance(m, nn.Conv2d):
             fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            # fan_out //= m.groups
             fan_out //= m.group
-            # m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             m.weight.set_data(initializer(Normal(sigma=math.sqrt(2.0 / fan_out)), m.weight.shape, m.weight.dtype))
             if m.bias is not None:
-                # m.bias.data.zero_()
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
 
     def construct(self, x):
         x = self.conv(x)
         _, _, H, W = x.shape
-        # print('before  = x.flatten(start_dim=2).swapaxes(1, 2)')
-        # print(x.shape)
         x = x.flatten(start_dim=2).swapaxes(1, 2)
-        # print('after  = x.flatten(start_dim=2).swapaxes(1, 2)')
-        # print(x.shape)
         x = self.norm(x)
 
         return x, H, W
@@ -368,23 +318,15 @@ class AuxiliaryEmbedding():
         self.B = B
         self.D = D
         self.out = self.get_encode(cam_label, view_label)
-        # print(cam_label)
-        # print(view_label)
-        # print(123123123)
+        
     def __call__(self):
         return self.out
 
     def get_encode(self, *items):
         arg = [item for item in items if item is not None]
-        # aux_embed = torch.zeros(self.B, device='cuda')
         aux_embed = ms.ops.zeros(self.B)
-
         for C, T in enumerate(arg):
-            # aux_embed += torch.sin((C + 1) / 10000 ** (2 * T / self.D))
-            # print(C)
-            # print(T)
             aux_embed += ms.ops.sin((C + 1) / 10000 ** (2 * T / self.D))
-
         return aux_embed
 
 
@@ -398,8 +340,6 @@ class PTCR(nn.Cell):
         self.depths = depths
         self.num_stages = num_stages
 
-        # dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
-        # dpr = [x for x in ms.ops.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
         dpr = ms.ops.linspace(0, drop_path_rate, sum(depths))
         cur = 0
 
@@ -426,36 +366,26 @@ class PTCR(nn.Cell):
 
         self.global_pool = GeM()
 
-        # print(self.global_pool.get_parameters())
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Dense):
-            # trunc_normal_(m.weight, std=.02)
             m.weight.set_data(initializer(TruncatedNormal(sigma=0.02), m.weight.shape, m.weight.dtype))
             if isinstance(m, nn.Dense) and m.bias is not None:
-                # nn.init.constant_(m.bias, 0)
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
         elif isinstance(m, nn.LayerNorm):
-            # nn.init.constant_(m.bias, 0)
-            # nn.init.constant_(m.weight, 1.0)
             m.beta.set_data(initializer(Zero(), m.beta.shape, m.beta.dtype))
             m.gamma.set_data(initializer(One(), m.gamma.shape, m.gamma.dtype))
         elif isinstance(m, nn.Conv2d):
             fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            # fan_out //= m.groups
             fan_out //= m.group
-            # m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             m.weight.set_data(initializer(Normal(sigma=math.sqrt(2.0 / fan_out)), m.weight.shape, m.weight.dtype))
             if m.bias is not None:
-                # m.bias.data.zero_()
                 m.bias.set_data(initializer(Zero(), m.bias.shape, m.bias.dtype))
 
 
 
     def construct(self, x, label=None, cam_label=None, view_label=None ):
-        # print('before feature, maps = self.forward_features(x, label, view_label, cam_label)')
-        # print(x.shape)
         B = x.shape[0]
         maps = []
         for i in range(self.num_stages):
@@ -467,12 +397,7 @@ class PTCR(nn.Cell):
                 D = x.shape[2]
                 # print(1231232)
                 aux_embed = AuxiliaryEmbedding(B, D, cam_label, view_label)
-
                 for j in range(B):
-                    # print(aux_embed.out[j])
-                    # print("")
-                    # print("")
-                    # print("")
                     x[j] += 0.55 * aux_embed.out[j]
             for blk in block:
                 x = blk(x, H, W)
