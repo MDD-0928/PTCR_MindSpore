@@ -191,7 +191,9 @@ def train_net():
     num_batches = dataset1.get_dataset_size()
    
     net = make_model(cfg, num_class=num_classes, camera_num=camera_num, view_num=view_num)
-    
+    param_dict = load_checkpoint("mdd-120_736.ckpt")
+    load_param_into_net(PTCR, param_dict)
+  
     ptcrloss = PTCRLoss(
         ce=CrossEntropyLoss(num_classes=num_classes,
                             label_smooth=cfg.MODEL.LABELSMOOTH),
@@ -228,7 +230,7 @@ def train_net():
         lr_epoch_stair=True
     )
 
-    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=1e-7, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
 
     model2 = Model(network=net, optimizer=opt3, loss_fn=ptcrloss)
 
