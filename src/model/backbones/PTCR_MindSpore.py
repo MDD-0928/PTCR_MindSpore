@@ -231,7 +231,7 @@ class BlurPool(nn.Cell):
         elif (self.filt_size == 7):
             a = np.array([1., 6., 15., 20., 15., 6., 1.])
 
-        filt = ms.Tensor(a[:, None] * a[None, :])
+        filt = ms.Tensor(a[:, None] * a[None, :], dtype=ms.dtype.float32)
         filt = filt / ms.ops.sum(filt)
         self.filt = ms.Parameter(filt[None, None, :, :].tile((self.channels, 1, 1, 1)).astype(ms.dtype.float32), name='filt',
                                  requires_grad=False)
