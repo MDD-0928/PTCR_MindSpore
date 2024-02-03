@@ -18,8 +18,9 @@ import mindspore.numpy as msnp
 import mindspore as ms
 import mindspore.ops as P
 from mindspore import nn
-from ..config import cfg
+from ..config.configs import get_config
 
+cfg = get_config()
 
 class CrossEntropyLoss(nn.Cell):
     r"""Cross entropy utils with label smoothing regularizer.
@@ -61,9 +62,6 @@ class CrossEntropyLoss(nn.Cell):
                 Each position contains the label index.
         """
         log_probs = self.logsoftmax(inputs)
-        # print(log_probs)
-        # print(log_probs.shape)
-        # print(type(log_probs))
         depth = log_probs.shape[0]
         onehot = nn.OneHot(depth=depth, axis=-1)
         targets = onehot(targets)
@@ -107,19 +105,18 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
     assert len(dist_mat.shape) == 2
     assert dist_mat.shape[0] == dist_mat.shape[1]
     N = dist_mat.shape[0]
-
     # shape [N, N]
     temp = ms.ops.broadcast_to(labels, (N, N))
+
     is_pos = temp.equal(temp.t())
+    
     is_neg = temp.ne(temp.t())
-    # is_pos = labels.expand(N, N).equal(labels.expand(N, N).t())
-    # is_neg = labels.expand(N, N).ne(labels.expand(N, N).t())
+    a = dist_mat[is_pos]
 
     # `dist_ap` means distance(anchor, positive)
     # both `dist_ap` and `relative_p_inds` with shape [N, 1]
     dist_ap, relative_p_inds = ms.ops.max(
         dist_mat[is_pos].view(N, -1), 1, keepdims=True)
-    # print(dist_mat[is_pos].shape)
     # `dist_an` means distance(anchor, negative)
     # both `dist_an` and `relative_n_inds` with shape [N, 1]
     dist_an, relative_n_inds = ms.ops.min(
@@ -360,21 +357,14 @@ class PTCRLoss(nn.Cell):
         forward
         '''
         score, feat = logits
-       
         target = labels
         
-        if isinstance(score, list):
-            acc = (score[0].max(axis=1, return_indices=True)[1] == target).float().mean()
-        else:
-            acc = (score.max(axis=1, return_indices=True)[1] == target).float().mean()
-            
-        print(acc)
-
         if isinstance(score, list):
             ID_LOSS = [ms.ops.cross_entropy(scor, target) for scor in score[1:]]
             ID_LOSS = sum(ID_LOSS) / len(ID_LOSS)
             ID_LOSS = 0.5 * ID_LOSS + 0.5 * ms.ops.cross_entropy(score[0], target)
         else:
+
             ID_LOSS = ms.ops.cross_entropy(score, target)
 
         if isinstance(feat, list):
@@ -382,6 +372,7 @@ class PTCRLoss(nn.Cell):
             TRI_LOSS = sum(TRI_LOSS) / len(TRI_LOSS)
             TRI_LOSS = 0.5 * TRI_LOSS + 0.5 * self.tri(feat[0], target)[0]
         else:
+
             TRI_LOSS = self.tri(feat, target)
                 
         return self.loss_weight * ID_LOSS + \
