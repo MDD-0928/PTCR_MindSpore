@@ -1,4 +1,4 @@
-#coding=UTF-8
+# coding=UTF-8
 # Copyright 2021 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License Version 2.0(the "License");
@@ -9,7 +9,7 @@
 #
 # Unless required by applicable law or agreed to in writing software
 # distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANT IES OR CONITTONS OF ANY KIND锟?either express or implied.
+# WITHOUT WARRANT IES OR CONITTONS OF ANY KIND??either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====================================================================================
@@ -17,42 +17,75 @@
 
 import warnings
 import os
+import time
+import argparse
 import os.path as osp
 import numpy as np
-import argparse
 import mindspore as ms
 import mindspore.nn as nn
-
 from mindspore.common import set_seed
 from mindspore import Tensor, Model, context
-from mindspore import load_checkpoint, load_param_into_net
+from mindspore import load_checkpoint
 from mindspore.train.callback import (Callback, ModelCheckpoint, CheckpointConfig, LossMonitor,
                                       TimeMonitor, SummaryCollector)
 from mindspore.communication.management import init
+from mindspore import _checkparam as Validator
+from mindspore.train import Accuracy
 from test import do_eval
 from src.utils.loss import OriTripletLoss, CrossEntropyLoss, TripletLoss, PTCRLoss
-from src.model.make_model_MindSpore import make_model
-from src.utils.local_adapter import get_device_id, get_device_num
-from src.config import cfg
-from src.dataset.dataset import dataset_creator
-from src.utils.lr_generator import step_lr, multi_step_lr, warmup_step_lr
-
+from src.model.make_model_MindSpore import make_model, load_paramdict_into_net
+from src.config.configs import get_config
+from src.dataset.dataset_2 import dataset_creator
+from logger import setup_logger
 import mindcv.optim as optim_ms
 import mindcv.scheduler as scheduler_ms
-from mindspore.train import Accuracy
-
+cfg = get_config()
+logger = setup_logger('PTCR', cfg.OUTPUT_DIR, if_train=True)
+logger.info('PTCR_Pyramidal Transformer with Conv-Patchify for Person Re-identification')
+logger.info("Saving model in the path :{}".format(cfg.OUTPUT_DIR))
+logger.info("Running with config:\n{}".format(cfg))
 set_seed(cfg.SOLVER.SEED)
 
+class TimeCallBack(TimeMonitor):
+    def __init__(self, data_size=0):
+        super(TimeCallBack, self).__init__()
+        self.datasize = data_size
+
+    def epoch_end(self, run_context):
+        """
+        Print process cost time at the end of epoch.
+
+        Args:
+           run_context (RunContext): Context of the process running. For more details,
+                   please refer to :class:`mindspore.train.RunContext`.
+        """
+        epoch_seconds = (time.time() - self.epoch_time) * 1000
+        step_size = self.datasize
+        cb_params = run_context.original_args()
+        mode = cb_params.get("mode", "")
+        if hasattr(cb_params, "batch_num"):
+            batch_num = cb_params.batch_num
+            if isinstance(batch_num, int) and batch_num > 0:
+                step_size = cb_params.batch_num
+        Validator.check_positive_int(step_size)
+
+        step_seconds = epoch_seconds / step_size
+        logger.info("{} epoch time: {:5.3f} ms, per step time: {:5.3f} ms".format
+              (mode.title(), epoch_seconds, step_seconds))
+        print("{} epoch time: {:5.3f} ms, per step time: {:5.3f} ms".format
+              (mode.title(), epoch_seconds, step_seconds), flush=True)
+              
+              
 class LossCallBack(LossMonitor):
     """
     Monitor the utils in training.
     If the utils in NAN or INF terminating training.
     """
 
-    def __init__(self, has_trained_epoch=0):
+    def __init__(self, has_trained_epoch=0, batch_size=0):
         super(LossCallBack, self).__init__()
         self.has_trained_epoch = has_trained_epoch
-
+        self.size = batch_size
     def step_end(self, run_context):
         '''check utils at the end of each step.'''
         cb_params = run_context.original_args()
@@ -71,7 +104,9 @@ class LossCallBack(LossMonitor):
         if isinstance(loss, float) and (np.isnan(loss) or np.isinf(loss)):
             raise ValueError("epoch: {} step: {}. Invalid utils, terminating training.".format(
                 cb_params.cur_epoch_num, cur_step_in_epoch))
-        if self._per_print_times != 0 and cb_params.cur_step_num % self._per_print_times == 0:
+        if self._per_print_times != 0 and (cb_params.cur_step_num-(cb_params.cur_epoch_num + int(self.has_trained_epoch)*self.size)) % 100 == 0:
+            logger.info("epoch: %s step: %s, utils is %s" % (cb_params.cur_epoch_num + int(self.has_trained_epoch),
+                                                       cur_step_in_epoch, loss))
             print("epoch: %s step: %s, utils is %s" % (cb_params.cur_epoch_num + int(self.has_trained_epoch),
                                                        cur_step_in_epoch, loss), flush=True)
 
@@ -114,22 +149,6 @@ def check_isfile(fpath):
     return isfile
 
 
-# def load_from_checkpoint(net):
-#     '''load parameters when resuming from a checkpoint for training.'''
-#     param_dict = load_checkpoint(cfg.TEST.WEIGHT)
-#     if param_dict:
-#         if param_dict.get("epoch_num") and param_dict.get("step_num"):
-#             cfg.start_epoch = int(param_dict["epoch_num"].data.asnumpy())
-#             cfg.start_step = int(param_dict["step_num"].data.asnumpy())
-#         else:
-#             cfg.start_epoch = 0
-#             cfg.start_step = 0
-#         load_param_into_net(net, param_dict)
-#     else:
-#         raise ValueError("Checkpoint file:{} is none.".format(
-#             cfg.checkpoint_file_path))
-
-
 def set_save_ckpt_dir():
     """set save ckpt dir"""
     ckpt_save_dir = os.path.join(
@@ -140,24 +159,19 @@ def set_save_ckpt_dir():
 
 def get_callbacks(num_batches):
     '''get all callback list'''
-    time_cb = TimeMonitor(data_size=num_batches)
-    loss_cb = LossCallBack()
-    summary_collector = SummaryCollector(
-        summary_dir='/data1/mqx_log/PTCR_MindSpore/summary_dir', collect_freq=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches)
+    time_cb = TimeCallBack(data_size=num_batches)
+    loss_cb = LossCallBack(batch_size=num_batches)
 
-    cb = [time_cb, loss_cb, summary_collector]
-    
-    # print(num_batches)
+    cb = [time_cb, loss_cb]
 
     ckpt_append_info = [
         {"epoch_num": cfg.SOLVER.START_EPOCH, "step_num": cfg.SOLVER.START_EPOCH}]
-    # cfg_ck = CheckpointConfig(save_checkpoint_steps=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches,
-                            #   keep_checkpoint_max=5, append_info=ckpt_append_info)
-    cfg_ck = CheckpointConfig(save_checkpoint_steps = cfg.SOLVER.CHECKPOINT_PERIOD * num_batches,
+   
+    cfg_ck = CheckpointConfig(save_checkpoint_steps=cfg.SOLVER.CHECKPOINT_PERIOD * num_batches,
                               keep_checkpoint_max=30, append_info=ckpt_append_info)
 
     ckpt_cb = ModelCheckpoint(
-        prefix="mdd", directory=set_save_ckpt_dir(), config=cfg_ck)
+        prefix="PTCR", directory=set_save_ckpt_dir(), config=cfg_ck)
     cb += [ckpt_cb]
 
     return cb
@@ -166,63 +180,37 @@ def get_callbacks(num_batches):
 def train_net():
     """train net"""
     context.set_context(mode=context.GRAPH_MODE,
-                        device_target='GPU')
-    # device_num = get_device_num()
-    # if cfg.MODEL.DEVICE == "CPU":
-    # device_id = get_device_id()
-    # context.set_context(device_id=device_id)
-    #     if device_num > 1:
-    #         context.reset_auto_parallel_context()
-    #         context.set_auto_parallel_context(device_num=device_num, parallel_mode='data_parallel',
-    #                                           gradients_mean=True)
-    #         init()
+                        device_target='Ascend')
 
+    context.set_context(device_id=cfg.MODEL.DEVICE_ID)
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
-    
     num_classes, dataset1, camera_num, view_num = dataset_creator(
         root=cfg.DATASETS.ROOT_DIR, height=cfg.INPUT.HEIGHT,
         width=cfg.INPUT.WIDTH, dataset=cfg.DATASETS.NAMES,
         norm_mean=cfg.INPUT.PIXEL_MEAN, norm_std=cfg.INPUT.PIXEL_STD,
         batch_size_train=cfg.SOLVER.IMS_PER_BATCH, workers=cfg.DATALOADER.NUM_WORKERS,
-        cuhk03_labeled=cfg.DATALOADER.cuhk03_labeled, cuhk03_classic_split=cfg.DATALOADER.cuhk03_classic_split
-        , mode='train')
+        cuhk03_labeled=cfg.DATALOADER.cuhk03_labeled, cuhk03_classic_split=cfg.DATALOADER.cuhk03_classic_split, mode='train')
 
     num_batches = dataset1.get_dataset_size()
-   
+
     net = make_model(cfg, num_class=num_classes, camera_num=camera_num, view_num=view_num)
-    param_dict = load_checkpoint("mdd-120_736.ckpt")
-    load_param_into_net(PTCR, param_dict)
-  
+
+    param_dict = load_checkpoint(cfg.SOLVER.PRETRAIN_WEIGHT)
+
     ptcrloss = PTCRLoss(
         ce=CrossEntropyLoss(num_classes=num_classes,
                             label_smooth=cfg.MODEL.LABELSMOOTH),
         tri=TripletLoss(margin=cfg.SOLVER.MARGIN)
-        )
+    )
+    base_lr = float(cfg.SOLVER.BASE_LR)
 
-    params = []
-    for param in net.get_parameters():
-        if not param.requires_grad:
-            continue
-        lr = cfg.SOLVER.BASE_LR
-        weight_decay = cfg.SOLVER.WEIGHT_DECAY
-        if "bias" in param.name:
-            lr = cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR
-            weight_decay = cfg.SOLVER.WEIGHT_DECAY_BIAS
-        if cfg.SOLVER.LARGE_FC_LR:
-            if "classifier" in param.name or "arcface" in param.name:
-                lr = cfg.SOLVER.BASE_LR * 2
-                print('Using two times learning rate for fc ')
-
-        params += [{"params": [param], "lr": lr, "weight_decay": weight_decay}]
-                              
     lr_sche = scheduler_ms.create_scheduler(
         steps_per_epoch=num_batches,
         scheduler="cosine_decay",
-        lr=cfg.SOLVER.BASE_LR,
-        min_lr=0.002 * cfg.SOLVER.BASE_LR,
+        lr=base_lr,
+        min_lr=0.5*base_lr,
         warmup_epochs=cfg.SOLVER.WARMUP_EPOCHS,
-        warmup_factor=0.01,
+        warmup_factor=cfg.SOLVER.WARMUP_FACTOR,
         decay_epochs=cfg.SOLVER.MAX_EPOCHS - cfg.SOLVER.WARMUP_EPOCHS,
         num_epochs=cfg.SOLVER.MAX_EPOCHS,
         num_cycles=1,
@@ -230,9 +218,12 @@ def train_net():
         lr_epoch_stair=True
     )
 
-    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=1e-7, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+    net = load_paramdict_into_net(net, param_dict)
+    
+    opt3 = optim_ms.create_optimizer(net.trainable_params(), opt='adamw', lr=lr_sche,
+                                     weight_decay=cfg.SOLVER.WEIGHT_DECAY)
 
-    model2 = Model(network=net, optimizer=opt3, loss_fn=ptcrloss)
+    model2 = Model(network=net, optimizer=opt3, loss_fn=ptcrloss, amp_level='O3')
 
     callbacks = get_callbacks(num_batches)
 
@@ -242,20 +233,5 @@ def train_net():
 
 
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description="ReID Baseline Training")
-    parser.add_argument(
-        "--config_file", default="./src/PTCR.yml", help="path to config file", type=str
-    )
-
-    # parser.add_argument("opts", help="Modify config options using the command-line", default=None,
-    #                     nargs=argparse.REMAINDER)
-    parser.add_argument("--local_rank", default=0, type=int)
-    args = parser.parse_args()
-
-    if args.config_file != "":
-        cfg.merge_from_file(args.config_file)
-    # cfg.merge_from_list(args.opts)
-    cfg.freeze()
 
     train_net()
