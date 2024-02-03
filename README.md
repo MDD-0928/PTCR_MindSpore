@@ -5,7 +5,7 @@ This is a MindSpore implementation of the PTCR proposed in *[Pyramidal Transform
 ##  Environment
 
 - Python 3.8
-- MindSpore 2.0.0 (GPU)
+- MindSpore 2.0.0 (Ascend)
 - mindcv
 
 ## Usage
@@ -13,7 +13,7 @@ This is a MindSpore implementation of the PTCR proposed in *[Pyramidal Transform
 - Organize datasets as below
 
 ```
-├──"DATASETS.ROOT_DIR" in /src/config/defaults.py
+├──"DATASETS.ROOT_DIR" in /src/PTCR_MindSpore.yaml
    ├──market1501
       ├──Market-1501
          ├──bounding_box_train
@@ -39,8 +39,8 @@ This is a MindSpore implementation of the PTCR proposed in *[Pyramidal Transform
          ├──list_query.txt
 ```
 
-- Set your own "OUTPUT_DIR " in /src/config/defaults.py
-- Set your own "DATASETS.NAMES " in /src/config/defaults.py：{market1501、dukemtmcreid、cuhk03、msmt17}
+- Set your own "OUTPUT_DIR " in /src/PTCR_MindSpore.yaml
+- Set your own "DATASETS.NAMES " in /src/PTCR_MindSpore.yaml：{market1501、dukemtmcreid、cuhk03、msmt17}
 - Train
 
 ```
