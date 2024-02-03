@@ -130,6 +130,8 @@ class Dataset():
         self.num_train_pids = self.get_num_pids(self.train)
         self.num_train_cams = self.get_num_cams(self.train)
         self.num_datasets = self.get_num_datasets(self.train)
+        self.num_query_pids = self.get_num_pids(self.query)
+        self.num_gallery_pids = self.get_num_pids(self.gallery)
 
         if self.mode == 'train':
             self.data = self.train
@@ -278,7 +280,7 @@ class Market1501(Dataset):
 
         # allow alternative directory structure
         self.data_dir = self.dataset_dir
-        data_dir = osp.join(self.data_dir, 'Market-1501-v15.09.15')
+        data_dir = osp.join(self.data_dir, 'Market-1501')
         if osp.isdir(data_dir):
             self.data_dir = data_dir
         else:
@@ -322,6 +324,129 @@ class Market1501(Dataset):
                 continue  # junk images are just ignored
             assert 0 <= pid <= 1501  # pid == 0 means background
             assert 1 <= camid <= 6
+            camid -= 1  # index starts from 0
+            if relabel:
+                pid = pid2label[pid]
+            data.append((img_path, pid, camid))
+
+        return data
+
+class MSMT17_(Dataset):
+
+    dataset_dir = 'msmt17'
+
+    def __init__(self, root='', **kwargs):
+        self.root = osp.abspath(osp.expanduser(root))
+        self.dataset_dir = osp.join(self.root, self.dataset_dir)
+
+        # allow alternative directory structure
+        self.data_dir = self.dataset_dir
+        data_dir = osp.join(self.data_dir, 'MSMT17_V1_market')
+        if osp.isdir(data_dir):
+            self.data_dir = data_dir
+        else:
+            warnings.warn(
+                'The current data structure is deprecated. Please '
+                'put data folders such as "bounding_box_train" under '
+                '"Market-1501-v15.09.15".'
+            )
+
+        self.train_dir = osp.join(self.data_dir, 'bounding_box_train')
+        self.query_dir = osp.join(self.data_dir, 'query')
+        self.gallery_dir = osp.join(self.data_dir, 'bounding_box_test')
+
+        required_files = [
+            self.data_dir, self.train_dir, self.query_dir, self.gallery_dir
+        ]
+        self.check_before_run(required_files)
+        train = self.process_dir(self.train_dir, relabel=True)
+        query = self.process_dir(self.query_dir, relabel=False)
+        gallery = self.process_dir(self.gallery_dir, relabel=False)
+
+        super(MSMT17_, self).__init__(train, query, gallery, **kwargs)
+
+    def process_dir(self, dir_path, relabel=False):
+        '''get images and labels from directory.'''
+        img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
+        pattern = re.compile(r'([-\d]+)_c(\d)')
+
+        pid_container = set()
+        for img_path in img_paths:
+            pid, _ = map(int, pattern.search(img_path).groups())
+            if pid == -1:
+                continue  # junk images are just ignored
+            pid_container.add(pid)
+        pid2label = {pid: label for label, pid in enumerate(pid_container)}
+
+        data = []
+        for img_path in img_paths:
+            pid, camid = map(int, pattern.search(img_path).groups())
+            if pid == -1:
+                continue  # junk images are just ignored
+            # assert 0 <= pid <= 1501  # pid == 0 means background
+            # assert 1 <= camid <= 6
+            camid -= 1  # index starts from 0
+            if relabel:
+                pid = pid2label[pid]
+            data.append((img_path, pid, camid))
+
+        return data
+
+
+class CUHK03_(Dataset):
+
+    dataset_dir = 'cuhk03'
+
+    def __init__(self, root='', **kwargs):
+        self.root = osp.abspath(osp.expanduser(root))
+        self.dataset_dir = osp.join(self.root, self.dataset_dir)
+
+        # allow alternative directory structure
+        self.data_dir = self.dataset_dir
+        data_dir = osp.join(self.data_dir, 'cuhk03_np_detected')
+        if osp.isdir(data_dir):
+            self.data_dir = data_dir
+        else:
+            warnings.warn(
+                'The current data structure is deprecated. Please '
+                'put data folders such as "bounding_box_train" under '
+                '"Market-1501-v15.09.15".'
+            )
+
+        self.train_dir = osp.join(self.data_dir, 'bounding_box_train')
+        self.query_dir = osp.join(self.data_dir, 'query')
+        self.gallery_dir = osp.join(self.data_dir, 'bounding_box_test')
+
+        required_files = [
+            self.data_dir, self.train_dir, self.query_dir, self.gallery_dir
+        ]
+        self.check_before_run(required_files)
+        train = self.process_dir(self.train_dir, relabel=True)
+        query = self.process_dir(self.query_dir, relabel=False)
+        gallery = self.process_dir(self.gallery_dir, relabel=False)
+
+        super(CUHK03_, self).__init__(train, query, gallery, **kwargs)
+
+    def process_dir(self, dir_path, relabel=False):
+        '''get images and labels from directory.'''
+        img_paths = glob.glob(osp.join(dir_path, '*.png'))
+        pattern = re.compile(r'([-\d]+)_c(\d)')
+
+        pid_container = set()
+        for img_path in img_paths:
+            pid, _ = map(int, pattern.search(img_path).groups())
+            if pid == -1:
+                continue  # junk images are just ignored
+            pid_container.add(pid)
+        pid2label = {pid: label for label, pid in enumerate(pid_container)}
+
+        data = []
+        for img_path in img_paths:
+            pid, camid = map(int, pattern.search(img_path).groups())
+            if pid == -1:
+                continue  # junk images are just ignored
+            # assert 0 <= pid <= 1501  # pid == 0 means background
+            # assert 1 <= camid <= 6
             camid -= 1  # index starts from 0
             if relabel:
                 pid = pid2label[pid]
@@ -698,6 +823,7 @@ class CUHK03(Dataset):
             return tmp_set, len(unique_pids), len(idxs)
 
         def _extract_new_split(split_dict, img_dir):
+            print(11)
             train_idxs = split_dict['train_idx'].flatten() - 1  # index-0
             pids = split_dict['labels'].flatten()
             train_pids = set(pids[train_idxs])
@@ -709,7 +835,7 @@ class CUHK03(Dataset):
                 filelist, pids, pid2label, train_idxs, img_dir, relabel=True
             )
             query_info = _extract_set(
-                filelist, pids, pid2label, query_idxs, img_dir, relabel=False
+                filelist, pids, pid2label, query_idxs, img_dir, relabel=True
             )
             gallery_info = _extract_set(
                 filelist,
