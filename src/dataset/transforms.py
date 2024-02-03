@@ -19,7 +19,7 @@ import math
 import random
 import mindspore
 from mindspore.dataset.vision import Inter
-from ..config import cfg
+from ..config.configs import get_config
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 # from mindspore.dataset.transforms.c_transforms import Compose
 # import mindspore.dataset.vision.c_transforms as c_trans
@@ -28,8 +28,7 @@ from mindspore.dataset.transforms import Compose
 from mindspore import dtype as mstype
 import mindspore.dataset.vision as vis
 from mindspore import Tensor
-
-"""
+cfg=get_config()
 def _get_pixels(per_pixel, rand_color, patch_size, dtype=mstype.float32):
 
     if per_pixel:
@@ -76,6 +75,8 @@ class RandomErasing(PyTensorOperation):
         return input
 
     def _erase(self, img, chan, img_h, img_w, dtype):
+        # img = Tensor(img)
+        # print(dtype)
         if random.random() > self.probability:
             return
         area = img_h * img_w
@@ -93,61 +94,9 @@ class RandomErasing(PyTensorOperation):
                     img[:, top:top + h, left:left + w] = _get_pixels(
                         self.per_pixel, self.rand_color, (chan, h, w),
                         dtype)
+                    # print(type(img))
                     break
-"""
-"""
-class RandomErasing():
-    Randomly erases an image patch.
 
-    Args:
-        probability (float, optional): probability that this operation takes place.
-            Default is 0.5.
-        sl (float, optional): min erasing area.
-        sh (float, optional): max erasing area.
-        r1 (float, optional): min aspect ratio.
-        mean (list, optional): erasing value.
-    
-
-    def __init__(
-            self,
-            probability=0.5,
-            sl=0.02,
-            sh=0.4,
-            r1=0.3,
-            mean=None
-    ):
-        self.probability = probability
-        self.mean = mean
-        self.sl = sl
-        self.sh = sh
-        self.r1 = r1
-
-    def __call__(self, img):
-        if random.uniform(0, 1) > self.probability:
-            return img
-
-        for _ in range(100):
-            area = img.shape[1] * img.shape[2]
-
-            target_area = random.uniform(self.sl, self.sh) * area
-            aspect_ratio = random.uniform(self.r1, 1 / self.r1)
-
-            h = int(round(math.sqrt(target_area * aspect_ratio)))
-            w = int(round(math.sqrt(target_area / aspect_ratio)))
-
-            if w < img.shape[2] and h < img.shape[1]:
-                x1 = random.randint(0, img.shape[1] - h)
-                y1 = random.randint(0, img.shape[2] - w)
-                if img.shape[0] == 3:
-                    img[0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                    img[1, x1:x1 + h, y1:y1 + w] = self.mean[1]
-                    img[2, x1:x1 + h, y1:y1 + w] = self.mean[2]
-                else:
-                    img[0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                return img
-
-        return img
-"""
 
 def build_train_transforms(
         height,
