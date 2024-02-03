@@ -8,7 +8,7 @@
 #
 # Unless required by applicable law or agreed to in writing software
 # distributed under the License is distributed on an "AS IS" BASIS
-# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDï¼?either express or implied.
+# WITHOUT WARRANT IES OR CONITTONS OF ANY KINDï¿½?either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====================================================================================
@@ -22,19 +22,19 @@ from collections import defaultdict
 import numpy as np
 import mindspore.dataset as ds
 
-from ..config import cfg
+from ..config.configs import get_config
 
 from .transforms import build_train_transforms, build_test_transforms
-from .datasets_define import (Market1501, DukeMTMCreID, MSMT17, CUHK03)
-
+from .datasets_define_2 import (Market1501, DukeMTMCreID, MSMT17, CUHK03, MSMT17_, CUHK03_)
+cfg=get_config()
 
 def init_dataset(name, **kwargs):
     """Initializes an image dataset."""
     all_image_datasets = {
         'market1501': Market1501,
-        'cuhk03': CUHK03,
+        'cuhk03': CUHK03_,
         'dukemtmcreid': DukeMTMCreID,
-        'msmt17': MSMT17,
+        'msmt17': MSMT17_,
     }
     avai_datasets = list(all_image_datasets.keys())
     if name not in avai_datasets:
@@ -110,6 +110,7 @@ class RandomIdentitySampler(ds.Sampler):  # torch original
         return self.length
 
 
+
 def dataset_creator(
         root='',
         dataset=None,
@@ -135,8 +136,8 @@ def dataset_creator(
             name=dataset,
             root=root,
             mode=mode,
-            cuhk03_labeled=cuhk03_labeled,
-            cuhk03_classic_split=cuhk03_classic_split
+            # cuhk03_labeled=cuhk03_labeled,
+            # cuhk03_classic_split=cuhk03_classic_split
         )
     else:
         dataset_ = init_dataset(
@@ -168,14 +169,20 @@ def dataset_creator(
             data_set = ds.GeneratorDataset(
                 dataset_, ['img', 'pid'],
                 sampler=sampler, num_parallel_workers=workers)
-
+        
         transforms = build_train_transforms(height=height, width=width, transforms=transforms,
-                                            norm_mean=norm_mean, norm_std=norm_std)
+                                           norm_mean=norm_mean, norm_std=norm_std)
         data_set = data_set.map(operations=transforms, input_columns=['img'])
         
         data_set = data_set.batch(
             batch_size=batch_size_train, drop_remainder=True)
+
         return num_pids, data_set, cam_num, view_num
+
+    if mode == 'query':
+        num_pids = dataset_.num_query_pids
+    if mode == 'gallery':
+        num_pids = dataset_.num_gallery_pids
 
     data_set = ds.GeneratorDataset(dataset_, ['img', 'pid', 'camid'],
                                    num_parallel_workers=workers)
