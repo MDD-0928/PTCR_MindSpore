@@ -1,54 +1,94 @@
 MODEL:
-  METRIC_LOSS_TYPE: 'triplet'
-  IF_LABELSMOOTH: 'off'
-  IF_WITH_CENTER: 'no'
-  NAME: 'PTCR'
-  NO_MARGIN: False
-  DEVICE_ID: ('3')
-  STRIDE_SIZE: [16, 16]
-  TP: True
-
+    DEVICE: 'Ascend'
+    DEVICE_ID: 2
+    NAME: 'PTCR'
+    LAST_STRIDE: 1
+    PRETRAIN_PATH: ''
+    PRETRAIN_CHOICE: 'self'
+    NECK: 'bnneck'
+    IF_WITH_CENTER: 'no'
+    ID_LOSS_TYPE: 'softmax'
+    ID_LOSS_WEIGHT: 1.0
+    TRIPLET_LOSS_WEIGHT: 1.0
+    LOSS_PCTR: 'True'
+    METRIC_LOSS_TYPE: 'triplet'
+    DIST_TRAIN: False
+    NO_MARGIN: False
+    IF_LABELSMOOTH: 'off'
+    LABELSMOOTH: False
+    COS_LAYER: False
+    PERCEPTION: False
+    DROP_PATH: 0.1
+    DROP_OUT: 0.0
+    ATT_DROP_RATE: 0.0
+    TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID'
+    STRIDE_SIZE: [16, 16]
+    TP: True
+# -----------------------------------------------------------------------------
 INPUT:
-  SIZE_TRAIN: [384, 128]
-  SIZE_TEST: [384, 128]
-  HEIGHT: 384
-  WIDTH: 128
-  PROB: 0.5 # random horizontal flip
-  RE_PROB: 0.5 # random erasing
-  PADDING: 10
-  PIXEL_MEAN: [0.5, 0.5, 0.5]
-  PIXEL_STD: [0.5, 0.5, 0.5]
-
+    SIZE_TRAIN: [384, 128]
+    SIZE_TEST: [384, 128]
+    HEIGHT: 384
+    WIDTH: 128
+    PROB: 0.5
+    RE_PROB: 0.5
+    PIXEL_MEAN: [0.5, 0.5, 0.5]
+    PIXEL_STD: [0.5, 0.5, 0.5]
+    PADDING: 10
+# -----------------------------------------------------------------------------
 DATASETS:
-  NAMES: ('market1501')
-
+    NAMES: 'market1501'
+    ROOT_DIR: '/home/wuyiqun/data/'
+# -----------------------------------------------------------------------------
 DATALOADER:
-  SAMPLER: 'softmax_triplet'
-  NUM_INSTANCE: 4
-  NUM_WORKERS: 1
-
+    NUM_WORKERS: 1
+    SAMPLER: 'softmax_triplet'
+    NUM_INSTANCE: 4
+    cuhk03_labeled: False
+    cuhk03_classic_split: False
+    use_metric_cuhk03: False
+# ---------------------------------------------------------------------------- #
 SOLVER:
-  OPTIMIZER_NAME: 'AdamW'
-  MAX_EPOCHS: 120
-  BASE_LR: 5e-4
-  IMS_PER_BATCH: 32
-  WARMUP_METHOD: 'cosine'
-  LARGE_FC_LR: False
-  CHECKPOINT_PERIOD: 4
-  LOG_PERIOD: 45
-  EVAL_PERIOD: 10
-  WEIGHT_DECAY:  0.1
-  WEIGHT_DECAY_BIAS: 1e-4
-  BIAS_LR_FACTOR: 2
-
+    OPTIMIZER_NAME: "AdamW"
+    MAX_EPOCHS: 120
+    BASE_LR: 2e-5
+    LARGE_FC_LR: False
+    BIAS_LR_FACTOR: 2
+    SEED: 1234
+    MOMENTUM: 0.9
+    MARGIN: 0.3
+    CENTER_LR: 0.5
+    CENTER_LOSS_WEIGHT: 0.0005
+    WEIGHT_DECAY: 0.1
+    WEIGHT_DECAY_BIAS: 1e-4
+    GAMMA: 0.1
+    STEPS: (40, 70)
+    WARMUP_FACTOR: 0.5
+    WARMUP_EPOCHS: 80
+    WARMUP_METHOD: "cosine"
+    COSINE_MARGIN: 0.5
+    COSINE_SCALE: 30
+    CHECKPOINT_PERIOD: 10
+    LOG_PERIOD: 45
+    EVAL_PERIOD: 10
+    IMS_PER_BATCH: 32
+    START_EPOCH: 20
+    PRETRAIN_WEIGHT: '/home/wuyiqun/PTCR/PTCR/log/PTCR_pretrain.ckpt'
+# ---------------------------------------------------------------------------- #
 TEST:
-  EVAL: True
-  IMS_PER_BATCH: 32
-  RE_RANKING: False
-  WEIGHT: './logs/PTCR/transformer_120.pth'
-  NECK_FEAT: 'before'
-  FEAT_NORM: 'yes'
-
-OUTPUT_DIR: '/data1/mqx_log/PTCR_GRAPH_3/debug_logs'
-
-
+    IMS_PER_BATCH: 32
+    RE_RANKING: False
+    WEIGHT: '/home/wuyiqun/PTCR/PTCR/log/PTCR_finetune-120.ckpt'
+    # pretrain_model or model for test
+    NECK_FEAT: 'before'
+    FEAT_NORM: 'yes'
+    DIST_MAT: "dist_mat.npy"
+    EVAL: True
+# ---------------------------------------------------------------------------- #
+OUTPUT_DIR: '/home/wuyiqun/PTCR/PTCR/log/'
+# log location
+CHECKPOINT_PATH: 'checkpoint'
+LR_SCHEDULER: 'cosine'
+TRANSFORM: ['random_flip', 'pad', 'random crop', 'random_erase']
+REA: True
+IMPORT: "base"
