@@ -110,6 +110,7 @@ def eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
         )
 
     indices = np.argsort(distmat, axis=1)
+
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
 
     # compute cmc curve for each query
@@ -128,9 +129,8 @@ def eval_market1501(distmat, q_pids, g_pids, q_camids, g_camids, max_rank):
         order = indices[q_idx]
         remove = (g_pids[order] == q_pid) & (g_camids[order] == q_camid)
         keep = np.invert(remove)
-
         raw_cmc = matches[q_idx][keep]
-
+    
         # binary vector, positions with value 1 are correct matches
         if not np.any(raw_cmc):
             # this condition is true when query identity does not appear in gallery
