@@ -52,3 +52,9 @@ python train.py
 ```
 python test.py
 ```
+- Checkpoint
+
+```
+you can download the pretrained weight for training from
+you can download the finetuned weight for evaluate from
+```  
