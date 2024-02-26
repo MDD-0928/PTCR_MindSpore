@@ -2,6 +2,8 @@
 
 This is a MindSpore implementation of the PTCR proposed in *[Pyramidal Transformer with Conv-Patchify for Person Re-identification.](https://dl.acm.org/doi/10.1145/3503161.3548770)*
 
+**PLEASE MOVE TO “final” BRANCH for THE Ascend VERSION！！！**
+
 ##  Environment
 
 - Python 3.8
