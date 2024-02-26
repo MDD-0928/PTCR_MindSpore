@@ -1,6 +1,6 @@
 # PTCR_MindSpore
 
-This is a MindSpore implementation of the PTCR proposed in *[Pyramidal Transformer with Conv-Patchify for Person Re-identification.](https://dl.acm.org/doi/10.1145/3503161.3548770)*
+This is a MindSpore **Ascend** implementation of the PTCR proposed in *[Pyramidal Transformer with Conv-Patchify for Person Re-identification.](https://dl.acm.org/doi/10.1145/3503161.3548770)*
 
 ##  Environment
 
