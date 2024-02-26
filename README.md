@@ -56,5 +56,5 @@ python test.py
 
 ```
 you can download the pretrained weight for training from
-you can download the finetuned weight for evaluate from *[google_drive](https://drive.google.com/file/d/1QR__rOaaeAtL62xL1EogziF2xEGPG1W9/view?usp=drive_link)*
+you can download the finetuned weight for evaluate from [google_drive](https://drive.google.com/file/d/1QR__rOaaeAtL62xL1EogziF2xEGPG1W9/view?usp=drive_link)
 ```  
