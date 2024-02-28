@@ -54,5 +54,5 @@ python test.py
 ```
 
 - Checkpoint
-- you can download the pretrained weight for train from
-- you can download the finetuned weight for evaluation from [Google Drive](https://drive.google.com/file/d/1QR__rOaaeAtL62xL1EogziF2xEGPG1W9/view?usp=drive_link)
+- you can download the pretrained weight for train from [Google Drive](https://drive.google.com/file/d/1xOE66uiuE_mMgV1oO4DdkSL2gjhjVDFk/view?usp=sharing)
+- you can download the finetuned weight for evaluation from [Google Drive](https://drive.google.com/file/d/1QR__rOaaeAtL62xL1EogziF2xEGPG1W9/view?usp=sharing)
